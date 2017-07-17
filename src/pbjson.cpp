@@ -252,7 +252,10 @@ namespace pbjson
                 delete root;
                 return NULL;
             }
-            if (field->is_optional() && !ref->HasField(*msg, field))
+
+            // ignore empty fields
+            if ((!field->is_repeated() && !ref->HasField(*msg, field)) || 
+                (field->is_repeated() && ref->FieldSize(*msg, field) == 0))
             {
                 //do nothing
             }

@@ -17,5 +17,5 @@ message Request
 	required int32  arg1 = 2;
 	repeated int64 arg2 = 3;
 	optional double arg3 =	4;
-	repeated  Arg args = 5;
+	repeated Arg args = 5;
 }

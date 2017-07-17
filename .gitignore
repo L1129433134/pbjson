@@ -1,0 +1,6 @@
+build/
+test/*.o
+release/include
+release/lib
+src/*.o
+*.o
