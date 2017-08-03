@@ -13,10 +13,11 @@ int main()
     Request request;
     request.mutable_header()->set_user("");
     request.mutable_header()->set_passwd("test_passwd");
+    request.mutable_header()->set_aa(false);
     request.set_arg1(0);
-    // request.add_arg2(10100000000000001LL);
-    // request.add_arg2(1022222201LL);
-    request.set_arg3(3.1415926);
+    request.add_arg2(10100000000000001LL);
+    request.add_arg2(1022222201LL);
+    request.set_arg3(0.0f);
 
     Arg* arg = request.add_args();
     arg->set_f1("aaa");

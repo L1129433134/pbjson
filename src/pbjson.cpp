@@ -254,7 +254,7 @@ namespace pbjson
             }
 
             // ignore empty fields
-            if ((!field->is_repeated() && !ref->HasField(*msg, field)) || 
+            if ((!field->is_repeated() && field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE && !ref->HasField(*msg, field)) || 
                 (field->is_repeated() && ref->FieldSize(*msg, field) == 0))
             {
                 //do nothing

@@ -5,10 +5,11 @@ CXXFLAGS=-Wall -g
 
 #PBINC=/usr/local/include
 #PBLIB=/usr/local/lib/libprotobuf.a
-PBINC=/usr/include/google/protobuf
-PBLIB=/usr/lib/x86_64-linux-gnu/libprotobuf.a
+PBINC=/usr/local/include/google/protobuf
+PBLIB=/usr/local/lib/libprotobuf.a
+PBJSONLIB=../build/libpbjson.a
 INCS=-I./ -I../src -I${PBINC}
-LIBS=${PBLIB} -lpthread
+LIBS=${PBLIB} ${PBJSONLIB} -lpthread
 
 %.o : %.cpp
 	${CXX} -c ${CXXFLAGS} ${INCS} $< -o $@
@@ -16,7 +17,7 @@ LIBS=${PBLIB} -lpthread
 %.o : %.cc
 	${CXX} -c ${CCFLAGS} ${INCS} $< -o $@
 	
-CORE_OBJECTS := test.o test.pb.o ../src/pbjson.o
+CORE_OBJECTS := test.o test.pb.o
 
 all: exe
 
