@@ -32,7 +32,7 @@
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
-
+#include <iostream>
 #define RETURN_ERR(id, cause)  do{\
                                   err = cause; \
                                   return id;   \
@@ -278,9 +278,9 @@ namespace pbjson
         {
             case FieldDescriptor::CPPTYPE_INT32:
             {
-                if (json->GetType() != rapidjson::kNumberType)
+                if (!json->IsInt())
                 {
-                    RETURN_ERR(ERR_INVALID_JSON, "Not a number");
+                    RETURN_ERR(ERR_INVALID_JSON, "Not a int number");
                 }
                 if (repeated)
                 {
@@ -294,9 +294,9 @@ namespace pbjson
             }
             case FieldDescriptor::CPPTYPE_UINT32:
             {
-                if (json->GetType() != rapidjson::kNumberType)
+                if (!json->IsUint())
                 {
-                    RETURN_ERR(ERR_INVALID_JSON, "Not a number");
+                    RETURN_ERR(ERR_INVALID_JSON, "Not a uint number");
                 }
                 if (repeated)
                 {
@@ -310,9 +310,9 @@ namespace pbjson
             }
             case FieldDescriptor::CPPTYPE_INT64:
             {
-                if (json->GetType() != rapidjson::kNumberType)
+                if (!json->IsInt64())
                 {
-                    RETURN_ERR(ERR_INVALID_JSON, "Not a number");
+                    RETURN_ERR(ERR_INVALID_JSON, "Not a int64 number");
                 }
                 if (repeated)
                 {
@@ -326,9 +326,9 @@ namespace pbjson
             }
             case FieldDescriptor::CPPTYPE_UINT64:
             {
-                if (json->GetType() != rapidjson::kNumberType)
+                if (!json->IsUint64())
                 {
-                    RETURN_ERR(ERR_INVALID_JSON, "Not a number");
+                    RETURN_ERR(ERR_INVALID_JSON, "Not a uint64 number");
                 }
                 if (repeated)
                 {
@@ -342,9 +342,9 @@ namespace pbjson
             }
             case FieldDescriptor::CPPTYPE_DOUBLE:
             {
-                if (json->GetType() != rapidjson::kNumberType)
+                if (!json->IsDouble())
                 {
-                    RETURN_ERR(ERR_INVALID_JSON, "Not a number");
+                    RETURN_ERR(ERR_INVALID_JSON, "Not a double number");
                 }
                 if (repeated)
                 {
@@ -360,7 +360,7 @@ namespace pbjson
             {
                 if (json->GetType() != rapidjson::kNumberType)
                 {
-                    RETURN_ERR(ERR_INVALID_JSON, "Not a number");
+                    RETURN_ERR(ERR_INVALID_JSON, "Not a float number");
                 }
                 if (repeated)
                 {
@@ -374,7 +374,7 @@ namespace pbjson
             }
             case FieldDescriptor::CPPTYPE_BOOL:
             {
-                if (json->GetType() != rapidjson::kTrueType && json->GetType() != rapidjson::kFalseType)
+                if (!json->IsBool())
                 {
                     RETURN_ERR(ERR_INVALID_JSON, "Not a bool");
                 }
@@ -391,7 +391,7 @@ namespace pbjson
             }
             case FieldDescriptor::CPPTYPE_STRING:
             {
-                if (json->GetType() != rapidjson::kStringType)
+                if (!json->IsString())
                 {
                     RETURN_ERR(ERR_INVALID_JSON, "Not a string");
                 }
@@ -431,11 +431,11 @@ namespace pbjson
             {
                 const EnumDescriptor *ed = field->enum_type();
                 const EnumValueDescriptor *ev = 0;
-                if (json->GetType() == rapidjson::kNumberType)
+                if (json->IsInt())
                 {
                     ev = ed->FindValueByNumber(json->GetInt());
                 }
-                else if (json->GetType() == rapidjson::kStringType)
+                else if (json->IsString())
                 {
                     ev = ed->FindValueByName(json->GetString());
                 }

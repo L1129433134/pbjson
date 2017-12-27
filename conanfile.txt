@@ -1,0 +1,6 @@
+[requires]
+
+Protobuf/3.0.0@deepglint/stable
+
+[generators]
+cmake
