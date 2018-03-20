@@ -40,7 +40,66 @@
 using namespace google::protobuf;
 namespace pbjson
 {
+    static int is_map_field(const Message *msg, const FieldDescriptor *field,
+            rapidjson::Value::AllocatorType& allocator)
+    {
+        const Reflection *ref = msg->GetReflection();
+        const bool repeated = field->is_repeated();
+
+        size_t array_size = 0;
+        if (repeated)
+        {
+            array_size = ref->FieldSize(*msg, field);
+        }
+        
+        if (array_size < 1)
+        {
+            return -1;
+        }
+
+        for (size_t i = 0; i != array_size; ++i)
+        {
+            const Message *value = &(ref->GetRepeatedMessage(*msg, field, i));
+
+            const Descriptor *d = value->GetDescriptor();
+            if (!d)
+            {
+                return -2;
+            }
+                    
+            size_t count = d->field_count();
+            
+            // 检测是否是Map，当前判断的条件是,数组&&count==2&&name_suffix==Entry.key||Entry.value
+            if (count != 2)
+            {
+                return -3;
+            }
+            else
+            {
+                if (d->field(0) == NULL || d->field(1) == NULL)
+                {
+                    return -4;
+                }
+                
+                string key_name = d->field(0)->full_name();
+                string value_name = d->field(1)->full_name();
+                
+                int is_key = key_name.compare(key_name.length() - 9, 9, "Entry.key");
+                int is_value = value_name.compare(value_name.length() - 11, 11, "Entry.value");
+
+                if (is_key != 0 || is_value != 0)
+                {
+                    return -5;
+                }
+            }
+        }
+
+        return 0;
+    }
+    
     static rapidjson::Value *parse_msg(const Message *msg, rapidjson::Value::AllocatorType& allocator);
+    static void parse_map_kv(const Message *msg, rapidjson::Value::AllocatorType& allocator,
+                             rapidjson::Value **key, rapidjson::Value **value);
     static rapidjson::Value* field2json(const Message *msg, const FieldDescriptor *field,
             rapidjson::Value::AllocatorType& allocator)
     {
@@ -194,12 +253,33 @@ namespace pbjson
             case FieldDescriptor::CPPTYPE_MESSAGE:
                 if (repeated)
                 {
-                    for (size_t i = 0; i != array_size; ++i)
+                    if (is_map_field(msg, field, allocator) == 0)
                     {
-                        const Message *value = &(ref->GetRepeatedMessage(*msg, field, i));
-                        rapidjson::Value* v = parse_msg(value, allocator);
-                        json->PushBack(*v, allocator);
-                        delete v;
+                        delete json;
+                        json = new rapidjson::Value(rapidjson::kObjectType);
+                        
+                        for (size_t i = 0; i != array_size; ++i)
+                        {
+                            const Message *value = &(ref->GetRepeatedMessage(*msg, field, i));
+                            
+                            rapidjson::Value* key_json = NULL;
+                            rapidjson::Value* value_json = NULL;
+                            parse_map_kv(value, allocator, &key_json, &value_json);
+                            
+                            json->AddMember(*key_json, *value_json, allocator);
+                            delete key_json;
+                            delete value_json;
+                        }
+                    }
+                    else
+                    {
+                        for (size_t i = 0; i != array_size; ++i)
+                        {
+                            const Message *value = &(ref->GetRepeatedMessage(*msg, field, i));
+                            rapidjson::Value* v = parse_msg(value, allocator);
+                            json->PushBack(*v, allocator);
+                            delete v;
+                        }
                     }
                 }
                 else
@@ -238,6 +318,7 @@ namespace pbjson
         rapidjson::Value* root = new rapidjson::Value(rapidjson::kObjectType);
         if (!root)
             return NULL;
+        
         for (size_t i = 0; i != count; ++i)
         {
             const FieldDescriptor *field = d->field(i);
@@ -268,6 +349,24 @@ namespace pbjson
             }
         }
         return root;
+    }
+    static void parse_map_kv(const Message *msg, rapidjson::Value::AllocatorType& allocator,
+                             rapidjson::Value **key, rapidjson::Value **value)
+    {
+        const Descriptor *d = msg->GetDescriptor();
+        if (!d)
+        {
+            return;
+        }
+        
+        const Reflection *ref = msg->GetReflection();
+        if (!ref)
+        {
+            return;
+        }
+        
+        *key = field2json(msg, d->field(0), allocator);
+        *value = field2json(msg, d->field(1), allocator);
     }
     static int parse_json(const rapidjson::Value* json, Message* msg, std::string& err);
     static int json2field(const rapidjson::Value* json, Message* msg, const FieldDescriptor *field, std::string& err)
