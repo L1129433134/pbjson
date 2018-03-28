@@ -1,0 +1,230 @@
+syntax = "proto3";
+
+package dg.model;
+
+message SrcMetadata {
+    int64 Timestamp = 1;
+    int32 Duration = 2;
+    int32 SensorId = 3;
+    string SensorName = 4;
+    string SensorUrl = 5;
+    int32 RepoId = 6;
+    string RepoInfo = 7;
+    ObjType ObjType = 8;
+    string SensorIdStr = 9;
+}
+
+//-ping请求
+message PingRequest {
+}
+
+//-ping响应
+message PingResponse {
+    //-matrix的状态描述，正常时为"ok"
+    string Message = 1;
+}
+
+//-带有置信度的矩形框
+message Cutboard {
+    //-矩形框左上点坐标X
+    int32 X = 1;
+    //-矩形框左上点坐标y
+    int32 Y = 2;
+    //-矩形框宽度
+    int32 Width = 3;
+    //-矩形框高度
+    int32 Height = 4;
+    //-保留字段
+    int32 ResWidth = 5;
+    //-保留字段
+    int32 ResHeight = 6;
+    //-矩形框的置信度
+    float Confidence = 7;
+}
+
+message PointF {
+    float X = 1;
+    float Y = 2;
+}
+
+message Rect {
+    int32 X = 1;
+    int32 Y = 2;
+    int32 Width = 3;
+    int32 Height = 4;
+}
+
+message RotatedRect {
+    float CenterX = 1;
+    float CenterY = 2;
+    float Width = 3;
+    float Height = 4;
+    float Angle = 5;
+}
+
+//-矩形框及其裁剪图
+message CutboardImage {
+    //-矩形框的坐标
+    Cutboard Cutboard = 1;
+    //-裁剪图，基于Cutboard而非Rect
+    Image Img = 2;
+    //-带角度的矩形框
+    RotatedRect Rect = 3;
+}
+
+//-颜色
+message Color {
+    //-颜色值的ID
+    int32 ColorId = 1;
+    //-颜色值的置信度
+    float Confidence = 2;
+    //-颜色值的简体中文表示
+    string ColorName = 3;
+}
+
+//-目标类型
+enum ObjType {
+    OBJ_TYPE_UNKNOWN = 0;
+    OBJ_TYPE_FACE = 1024;
+    OBJ_TYPE_FACE_VECTOR = 3072;
+    OBJ_TYPE_FACE_CUTBOARD = 5120;
+}
+
+enum DataFmtType {
+    UNKNOWNFMT = 0;
+    JSON = 1;
+    PROTOBUF = 2;
+    CSV = 3;
+    PDF = 4;
+}
+
+//-对于某些属性，比如性别，其值只有两个，实际输出时增加unknown字段表示算法的不确定输出
+enum ThreeStatus {
+    THREE_STATUS_FALSE = 0;
+    THREE_STATUS_TRUE = 1;
+    THREE_STATUS_UNKNOWN = -1;
+}
+
+message FeatureVector {
+    int64 Id = 1; //特征的关键字
+    string Feature = 2; //特征值
+}
+
+message NullMessage {
+
+}
+
+//-属性
+message Attribute {
+    //-属性id
+    int32 AttributeId = 1;
+    //-属性的简体中文表示
+    string AttributeName = 2;
+    //-属性值的id
+    int32 ValueId = 3;
+    //-属性值的简体中文表示
+    string ValueString = 4;
+    //-属性值的置信度
+    float Confidence = 5; 
+}
+
+//-人脸属性
+message FaceAttribute {
+    //-属性的id
+    int32 AttributeId = 1;
+    //-属性的简体中文表示
+    string Name = 2;
+    //-属性值的id
+    int32 ValueId = 3;
+    //-属性值的置信度
+    float Confidence = 4;
+    //-属性值
+    oneof Value
+    {
+        bool ValueBool = 9;
+        int32 ValueInt = 10;
+        float ValueFloat = 11;
+        string ValueString = 12;
+    }
+}
+
+//-图片，当输入的URI/BinData中可以解析出图像的宽度和高度时Width字段和Height可以省略
+message Image {
+    //-图片的id，输入时可以指定
+    string Id = 1;
+    //-图片的宽度
+    int32 Width = 2;
+    //-图片的高度
+    int32 Height = 3;
+    //-图片的资源标识符，优先于BinData
+    string URI = 4;
+    //-图片的base64数据，若URI存在，此字段将被忽略
+    string BinData = 5; // base64 format image
+}
+
+//-人脸align结果
+message FaceAlignResult {
+    //-人脸的特征点
+    repeated PointF LandMarks = 1;
+    //-人脸特征点的分数
+    repeated float LandMarkScores = 2;
+    //-人脸位置，目前无数据
+    Rect Box = 3;
+    //-人脸的各类分数
+    map<string, float> Scores = 4;
+}
+
+//-识别到的人脸
+message RecFace {
+    //-人脸的id，在一次调用中唯一
+    int64 Id = 1;
+    //-人脸区域的置信度
+    float Confidence = 2;
+    //-人脸的矩形框
+    CutboardImage Img = 3;
+    //-人脸的align结果，人脸特征点及相关分数
+    FaceAlignResult AlignResult = 4;
+    //-人脸的质量分数，包括三维角度，检测分数等
+    map<string, float> Qualities = 5;
+    //-人脸的特征数据
+    string Features = 6;
+    //-人脸的属性，包括年龄，性别，民族等
+    repeated FaceAttribute Attributes = 7;
+    //-tansform后的人脸图片
+    Image AlignedImage = 8;
+    //-transform后的alignresult
+    FaceAlignResult TransformedAlignResult = 9;
+}
+
+//-属性值
+message NameAndConfidence {
+    //-属性值的id
+    int32 Id = 1;
+    //-属性值的中文简体表示
+    string Name = 2;
+    //-属性值的置信度
+    float Confidence = 3;
+}
+
+//-属性
+message CategoryAndFeature {
+    //-属性类别id
+    int32 Id = 1;
+    //-属性类别的中文简体表示
+    string CategoryName = 2;
+    //-属性的值
+    repeated NameAndConfidence Items = 3;
+}
+
+enum DBType {
+    KAFKA = 0;
+    POSTGRES = 1;
+    FILEIMAGE=2;
+}
+
+message StorageConfig {
+    string Address = 1; //结构化信息输出地址 ip:port
+    DBType Type = 2; //
+    repeated string Tags = 3; //设定数据的信息标签
+}
+

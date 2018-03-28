@@ -40,8 +40,7 @@
 using namespace google::protobuf;
 namespace pbjson
 {
-    static int is_map_field(const Message *msg, const FieldDescriptor *field,
-            rapidjson::Value::AllocatorType& allocator)
+    static int is_map_field(const Message *msg, const FieldDescriptor *field)
     {
         const Reflection *ref = msg->GetReflection();
         const bool repeated = field->is_repeated();
@@ -253,7 +252,7 @@ namespace pbjson
             case FieldDescriptor::CPPTYPE_MESSAGE:
                 if (repeated)
                 {
-                    if (is_map_field(msg, field, allocator) == 0)
+                    if (is_map_field(msg, field) == 0)
                     {
                         delete json;
                         json = new rapidjson::Value(rapidjson::kObjectType);
@@ -373,6 +372,7 @@ namespace pbjson
     {
         const Reflection *ref = msg->GetReflection();
         const bool repeated = field->is_repeated();
+
         switch (field->cpp_type())
         {
             case FieldDescriptor::CPPTYPE_INT32:
@@ -558,6 +558,7 @@ namespace pbjson
         return 0;
     }
 
+    static int parse_json_map(const rapidjson::Value* json, Message* msg, const FieldDescriptor *field, std::string& err);
     static int parse_json(const rapidjson::Value* json, Message* msg, std::string& err)
     {
         if (NULL == json || json->GetType() != rapidjson::kObjectType)
@@ -584,8 +585,20 @@ namespace pbjson
             }
             if (field->is_repeated())
             {
+                bool is_map = false;
                 if (itr->value.GetType() != rapidjson::kArrayType)
-                    RETURN_ERR(ERR_INVALID_JSON, "Not array");
+                {
+                    is_map = parse_json_map(&(itr->value), msg, field, err) == 0;
+                    if (is_map == false)
+                    {
+                        RETURN_ERR(ERR_INVALID_JSON, "Not array");
+                    }
+                }
+
+                if (is_map == true)
+                {
+                    continue;
+                }
                 for (rapidjson::Value::ConstValueIterator ait = itr->value.Begin(); ait != itr->value.End(); ++ait)
                 {
                     int ret = json2field(ait, msg, field, err);
@@ -602,6 +615,62 @@ namespace pbjson
                 {
                     return ret;
                 }
+            }
+        }
+        return 0;
+    }
+
+    static int parse_json_map(const rapidjson::Value* json, Message* msg, const FieldDescriptor *field, std::string& err)
+    {
+        if (NULL == json || json->GetType() != rapidjson::kObjectType)
+        {
+            return ERR_INVALID_ARG;
+        }
+        const Reflection *ref = msg->GetReflection();
+        if (ref == NULL)
+        {
+            RETURN_ERR(ERR_INVALID_PB, "invalid pb object");
+        }
+
+        for (rapidjson::Value::ConstMemberIterator itr = json->MemberBegin(); itr != json->MemberEnd(); ++itr)
+        {
+            const char* name = itr->name.GetString();
+            Message *sub_msg = ref->AddMessage(msg, field);
+
+            const Descriptor *sub_des = sub_msg->GetDescriptor();
+            const Reflection *sub_ref = sub_msg->GetReflection();
+            if (!sub_des || !sub_ref)
+            {
+                RETURN_ERR(ERR_INVALID_PB, "invalid pb object");
+            }
+
+            const FieldDescriptor *key_field = sub_des->FindFieldByName("key");
+            const FieldDescriptor *value_field = sub_des->FindFieldByName("value");
+            if (!key_field)
+            {
+                key_field = sub_ref->FindKnownExtensionByName("key");
+            }
+            if (!value_field)
+            {
+                value_field = sub_ref->FindKnownExtensionByName("value");
+            }
+
+            if (key_field == NULL || value_field == NULL)
+            {
+                RETURN_ERR(ERR_INVALID_PB, "invalid pb object");
+            }
+            if (itr->value.GetType() == rapidjson::kNullType)
+            {
+                ref->ClearField(msg, field);
+                continue;
+            }
+
+            sub_ref->SetString(sub_msg, key_field, string(name));
+
+            int ret = json2field(&(itr->value), sub_msg, value_field, err);
+            if (ret != 0)
+            {
+                return ret;
             }
         }
         return 0;

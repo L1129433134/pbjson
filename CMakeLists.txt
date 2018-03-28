@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 PROJECT(pbjson)
 
 SET(CONAN_FILE_NAME "conanfile.txt")
-execute_process(COMMAND conan install -f ${PROJECT_SOURCE_DIR}/${CONAN_FILE_NAME} --build=missing)
+execute_process(COMMAND conan install  ${PROJECT_SOURCE_DIR}/${CONAN_FILE_NAME} --build=missing)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -10,7 +10,7 @@ conan_basic_setup()
 SET(CMAKE_CXX_FLAGS_RELEASE " $ENV{CXXFLAGS} -fPIC -O3 -w")
 ADD_DEFINITIONS(-fPIC)
 
-FILE(GLOB_RECURSE SRC_LISTS *.cpp *.c *.cc)
+FILE(GLOB_RECURSE SRC_LISTS ./src/*.cpp ./src/*.c ./src/*.cc)
 
 INCLUDE_DIRECTORIES(${CONAN_INCLUDE_DIRS})
 
